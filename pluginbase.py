@@ -4,7 +4,7 @@
     ~~~~~~~~~~
 
     Pluginbase is a module for Python that provides a system for building
-    plugin based applications.
+    plugin & dynamic load based  applications.
 
     :copyright: (c) Copyright 2014 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
@@ -16,20 +16,12 @@ import errno
 import pkgutil
 import hashlib
 import threading
+import builtins
 
 from types import ModuleType
 from weakref import ref as weakref
+from io import BytesIO as NativeBytesIO
 
-
-PY2 = sys.version_info[0] == 2
-if PY2:
-    text_type = unicode
-    string_types = (unicode, str)
-    from cStringIO import StringIO as NativeBytesIO
-else:
-    text_type = str
-    string_types = (str,)
-    from io import BytesIO as NativeBytesIO
 
 
 __version__ = '0.7'
@@ -62,7 +54,7 @@ def get_plugin_source(module=None, stacklevel=None):
         frm = sys._getframe((stacklevel or 0) + 1)
         name = frm.f_globals['__name__']
         glob = frm.f_globals
-    elif isinstance(module, string_types):
+    elif isinstance(module, str):
         frm = sys._getframe(1)
         name = module
         glob = __import__(module, frm.f_globals,
@@ -130,7 +122,7 @@ def _shutdown_module(mod):
 
 
 def _to_bytes(s):
-    if isinstance(s, text_type):
+    if isinstance(s, str):
         return s.encode('utf-8')
     return s
 
@@ -423,7 +415,7 @@ class _ImportHook(ModuleType):
                       fromlist=None, level=None):
         if level is None:
             # set the level to the default value specific to this python version
-            level = -1 if PY2 else 0
+            level = 0
         import_name = name
         if self.enabled:
             ref_globals = globals
@@ -439,10 +431,7 @@ class _ImportHook(ModuleType):
                                    fromlist, level)
 
 
-try:
-    import __builtin__ as builtins
-except ImportError:
-    import builtins
+
 import_hook = _ImportHook(__name__ + '.import_hook', builtins.__import__)
 builtins.__import__ = import_hook.plugin_import
 sys.modules[import_hook.__name__] = import_hook
